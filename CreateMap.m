@@ -47,7 +47,9 @@ classdef CreateMap < handle
         % number of point in interpolated path
         num_points;
         % if necessary to create a car
-        car_position
+        car_position;
+        % path curvature
+        path_curvature;
     end
     properties(SetAccess = private)
         %------------------------------------------------------------------
@@ -142,6 +144,8 @@ classdef CreateMap < handle
             obj.map_points= [xx' yy'];
             obj.num_points= length(obj.map_points);
             drawnow;
+            % after interpolation, estimate curvature of path.
+            obj.find_curvature();
         end
         
         function create_waypoints(obj)
@@ -221,6 +225,29 @@ classdef CreateMap < handle
             obj.figure_handle.Visible = 'on';
             ax_limits = [min(obj.waypoints(:,1))-50, max(obj.waypoints(:,1))+50, min(obj.waypoints(:,2))-50, max(obj.waypoints(:,2))+50];
             axis(ax_limits);
+        end
+    end
+    methods(Access = private)
+        function find_curvature(obj)
+            
+            %--------------------------------------------------------------
+            % For reference and implementation see:
+            % 
+            % https://www.mathworks.com/matlabcentral/answers/58964-curvature-of-a-discrete-function
+            
+            x = obj.map_points(:,1);
+            y = obj.map_points(:,2);
+            dx = gradient(x);
+            dy = gradient(y);
+            ddx = gradient(dx);
+            ddy = gradient(dy);
+            num   = abs(dx .* ddy - ddx .* dy);
+            denom = dx .* dx + dy .* dy;
+            denom = sqrt(denom);
+            denom = denom .* denom .* denom;
+            curvature = num ./ denom;
+            curvature(denom < 0) = NaN;
+            obj.path_curvature = curvature;
         end
     end
 end
